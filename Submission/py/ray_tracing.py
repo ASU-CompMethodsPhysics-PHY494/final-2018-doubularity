@@ -20,7 +20,7 @@ def ray_tracing(w=400,h=300):
             z = R*np.sin(j)
             ax.plot(x,y,z)
             print (i,j)
-    ax.view_init(90, 0)
-    plt.show()
+    ax.view_init(0, 90)
+    plt.savefig('fov_side.png',dpi=300)
 
-ray_tracing(40,30)
+ray_tracing(10,8)
