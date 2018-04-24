@@ -29,7 +29,7 @@ def tracePath(r0,v0,L,M,m,h = 0.01,t = 0):
 
     def f(t,y):
         ar_rad = 2*m/(y[0]-2*m)*y[3]**2/y[0] #The acceleration due to the radial velocity
-        ar_cent = (r-3m)*(r-2*m)**2/y[0]**6*(M**2+L**2/np.sin(y[1])**2) #The acceleration due to the angular velocity
+        ar_cent = (r-3*m)*(r-2*m)**2/y[0]**6*(M**2+L**2/np.sin(y[1])**2) #The acceleration due to the angular velocity
         ar = ar_rad + ar_cent
 
         M^dot = np.cos(y[1])/np.sin(y[1])**3 * (y[0]-2*m)/y[0]**3) * L**2 #The change in angular momentum about the theta angle
@@ -38,6 +38,7 @@ def tracePath(r0,v0,L,M,m,h = 0.01,t = 0):
         phi^dot = (y[0]-2*m)/y[0]**3*y[4]/np.sin(y[1])**2 * L
 
         return [y[3],theta^dot,phi^dot,ar,M^dot]
+<<<<<<< HEAD
 
     positions = []
     while killConditionsMet(r,m) == False:
@@ -48,3 +49,5 @@ def tracePath(r0,v0,L,M,m,h = 0.01,t = 0):
     return np.array(positions)
 
         
+=======
+>>>>>>> 1463592704720e173ba31a4bc7a6e081905b9969
