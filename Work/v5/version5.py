@@ -1,25 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def cart2Pol(x):
-    """Translates cartesian coordinats to spherical coordinates
-    x - <array> the [x,y,z] coordinates
-    """
-    r = np.sqrt(x[0]**2 + x[1]**2 + x[2]**2)
-    if r > 0:
-        theta = np.arccos(x[2]/r)
-    else:
-        theta = 0
-    if theta != 0:
-        phi = np.arccos(x[0]/(r*np.sin(theta)))
-    else:
-        phi = 0
-
-    return r,theta,phi
-
 def pol2Cart(r):
-    """Translates spherical coordinates to cartesian coordinates
-    r - <array> the [r,theta,phi] coordinates
+    """Converts spherical coordinates to cartesian
+    r - <array> [r,theta,phi] coordinates
     """
     x = r[0] * np.sin(r[1]) * np.cos(r[2])
     y = r[0] * np.sin(r[1]) * np.sin(r[2])
@@ -27,112 +11,134 @@ def pol2Cart(r):
 
     return x,y,z
 
+def cart2Pol(x):
+    """Converts cartesian coordinates to spherical
+    x - <array> [x,y,z] coordinates
+    """
+    r = np.sqrt(x[0]**2 + x[1]**2 + x[2]**2)
+    if r > 0:
+        theta = np.arccos(x[2]/r)
+        if np.sin(theta) != 0:
+            phi = np.arccos(x[0]/np.sqrt(x[0]**2 + x[1]**2))
+        else:
+            phi = 0
+    else:
+        theta = phi = 0
+
+    return r,theta,phi
+
 def verlet(y,f,t,h):
-    """integrates the function, returns numpy array of y
-    y         - <numpy.array> [r,theta,phi,r_dot,M,L]
-    f         - <numpy.array> derive function of y
-    t         - <float> time
-    h         - <float> time step
+    """Integrates motion equations
+    y - <array> state vector
+    f - <array> derivative function
+    t - <float> time
+    h - <float> time step distance
     """
-    r_0 = np.array(y[:3])
-    v_0 = np.array(f(t,y)[:3])
+    r0 = np.array(y[:3])
+    v0 = np.array(f(t,y)[:3])
 
-    v_1_2 = v_0 + h/2 * f(t,y)[3:]
-    r_1 = r_0 + h * v_1_2
+    v1_2 = v0 + h/2 * np.array(f(t,y)[3:])
+    r1 = r0 + h * v1_2
+    y1 = np.append(r1,v1_2)
+    v1 = v1_2 * h/2 * np.array(f(t+h,y1)[3:])
+    y2 = np.append(r1,v1)
 
-    y1 = np.append(r_1,v_0)
+    return list(y2)
 
-    v_1 = v_1_2 + h/2 * f(t + h,y1)[3:]
-
-    return np.append(r_1,v_1)
-
-def render(res = [16,9],angle = 30.,D = 50.,R = 5.,Z = -10.,thiccness = 2.,shape = "square",l = 65.,kR = 100,m = 0,h = 0.01):
-    """Renders the setup environment
-    res       - <array> [x,y] resolution of the image
-    angle     - <float> angle covered by the x axis of the image
-    D         - <float> distance of camera from center
-    Z         - <float> z position of the collision plane
-    thiccness - <float> thickness of the collision plane
-    shape     - <string> which shape is being used
-    l         - <float> standard length of shape
-    kR        - <float> maximum particle distance
-    m         - <float> mass of black hole
+def render(res = [16,9],angle = 30,h = 1,R = 5,D = 10,kR = 150,m = 0,Z = -10,thiccness = 10,l = 65,shape = "circle"):
+    """Renders the image for the set up scene
+    res       - <array> [x,y] resolution
+    angle     - <float> angle coverd by the x axis (degrees)
     h         - <float> time step length
+    R         - <float> lens radius
+    D         - <float> distance of camera from center
+    kR        - <float> maximum light distance
+    m         - <float> mass of black hole
+    Z         - <float> position of collision plane
+    thiccness - <float> thickness of collision plane
+    l         - <float> standard image length
     """
+    #Setting up functions
+    #--------------------------------------------------------------------------
+    def f(t,y):
+        """Derivative function for motion
+        t - <float> time
+        y - <array> [r,theta,phi,r_dot,theta_dot,phi_dot] state vector
+                    [0,  1  , 2 ,  3  ,    4    ,   5   ]
+        """
+        a_r = y[0]*y[4]**2
+        a_theta = 2*y[3]*y[4]/y[0]
 
-    def inShape(r,Z,thiccness,shape,l):
-        """Returns True of False if the particle is inside the shape
-        r         - <numpy.array> [r,theta,phi] position of the particle
-        Z         - <float> z position of the collision plane
-        thiccness - <float> thickness of the collision plane
-        shape     - <string> which shape is being used
-        l         - <float> standard length of shape
+        return [y[3],y[4],0,a_r,a_theta,0]
+    def inShape(r,shape,l,thiccness):
+        """Determines whether a set of coordinates exist within a shape
+        r         - <array> [r,theta,phi] coordinates
+        shape     - <string> which shape ("circle"/"square")
+        l         - <float> standard length of object
+        thiccness - <float> thickness of collision plane
         """
         x,y,z = pol2Cart(r)
-
         inside = False
         if abs(Z - z) <= thiccness:
             if shape == "circle":
-                if x**2 + y**2 <= l**2:
+                if np.sqrt(x**2 + y**2) <= l:
                     inside = True
-            elif shape == "square":
+
+            if shape == "square":
                 if -l<x<l and -l<y<l:
                     inside = True
 
         return inside
+    #--------------------------------------------------------------------------
 
-    def f(t,y):
-        """Derives the state vector y = [r,theta,phi,r_dot,theta_dot,phi_dot]
-        t - <float> time
-        y - <numpy.array> state vector
-        """
-        a_r = y[0]*(y[4]**2 + np.sin(y[1])**2 * y[5]**2)
-        a_theta = np.sin(y[1])*np.sin(y[1])*y[2]**2 - 2*y[3]*y[4]/y[0]
-        a_phi = -2*(np.cos(y[1])/np.sin(y[1])*y[4]*y[5] + y[3]*y[5]/y[1])
-
-        return np.array([y[3],y[4],y[5],a_r,a_theta,a_phi])
-
-    #Setting up the camera:
+    #Setting up the camera
+    #--------------------------------------------------------------------------
     alpha = angle * np.pi/180
     beta = alpha * res[1]/res[0]
     CAM = np.zeros((res[1],res[0]))
+    #--------------------------------------------------------------------------
 
-    per = -1/(res[0]*res[1])
+    #Rendering up the scene:
+    #--------------------------------------------------------------------------
     m = -1
+    per = -1/(res[0]*res[1])
     for a in np.arange(-alpha/2,alpha/2,alpha/res[0]):
         m += 1
         n = -1
         for b in np.arange(-beta/2,beta/2,beta/res[1]):
             per += 1/(res[0]*res[1])
             n += 1
+            #Setting particle position:
+            x,y,z = -R*np.sin(a),R*np.cos(a)*np.sin(b),D - R*np.cos(a)*np.cos(b)
+            r0,theta0,phi0 = cart2Pol([x,y,z])
+            #Setting particle velocity:
+            r0_dot = -np.sqrt(1 - (np.sin(a)**2 + np.cos(a)**2 * np.sin(b)**2))
+            theta_dot = np.sqrt(np.sin(a)**2 + np.cos(a)**2 * np.sin(b)**2)/r0
+            #State vector:
+            y = [r0,theta0,phi0,r0_dot,theta_dot,0]
 
-            #Setting up particle position:
-            x0 = [R*np.sin(a),R*np.cos(a)*np.sin(b),D - R*np.cos(a)*np.cos(b)]
-            r0 = np.asarray(cart2Pol(x0))
-            #Setting up particle velocity:
-            r0_dot = np.sqrt(1 - (np.sin(a)**2 + np.cos(a)**2 * np.sin(b)**2))
-            theta0_dot = np.sqrt(x0[1]**2 + x0[2]**2)/r0[0]
-            v0 = np.array([r0_dot,theta0_dot,0])
-
-            y = np.append(r0,v0)
-
+            #Running the traces:
             t = 0
-            positions = [[t,y[0],y[1],y[2]]]
+            positions = [[t,r0,theta0,phi0]]
             while 1:
                 y = verlet(y,f,t,h)
-                y += h
+                t += h
+                print(positions,";",t,cart2Pol(positions[-1][1:]))
                 positions.append([t,y[0],y[1],y[2]])
-
-                if y[0] > kR:
-                    break
-                elif y[0] <= 3*m:
-                    break
-                elif inShape(y[:3],Z,thiccness,shape,l):
+                #Checking kill conditions:
+                if inShape(positions[-1][1:],shape,l,thiccness):
                     CAM[n,m] += 1
+                    print("hit!!!!!!!")
                     break
-            print(pol2Cart(positions[0][1:])[2],pol2Cart(positions[-1][1:])[2])
+                elif positions[-1][1] > kR:
+                    print("Out of bounds")
+                    break
+                #elif positions[-1][0] <= 3*m:
+                    #break
+            print(positions[-1][1:])
             CAM[n,m] += 1
-        print(100*per,"%")
+        print(per*100,"%")
 
     plt.imshow(CAM)
+    plt.colorbar()
     plt.show()
