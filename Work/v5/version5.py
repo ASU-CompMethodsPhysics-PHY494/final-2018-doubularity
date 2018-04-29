@@ -68,8 +68,8 @@ def render(res = [16,9],angle = 30,h = 1,R = 5,D = 10,kR = 150,m = 0,Z = -10,thi
         """
         a_r = y[0]*y[4]**2
         a_theta = 2*y[3]*y[4]/y[0]
-
         return [y[3],y[4],0,a_r,a_theta,0]
+
     def inShape(r,shape,l,thiccness):
         """Determines whether a set of coordinates exist within a shape
         r         - <array> [r,theta,phi] coordinates
@@ -128,14 +128,15 @@ def render(res = [16,9],angle = 30,h = 1,R = 5,D = 10,kR = 150,m = 0,Z = -10,thi
                 #Checking kill conditions:
                 if inShape(positions[-1][1:],shape,l,thiccness):
                     CAM[n,m] += 1
-                    print("hit!!!!!!!")
+                    #print("hit!!!!!!!")
                     break
                 elif positions[-1][1] > kR:
-                    print("Out of bounds")
+                    #print("Out of bounds")
                     break
-                #elif positions[-1][0] <= 3*m:
-                    #break
-            print(positions[-1][1:])
+                elif positions[-1][0] <= 3*m:
+                    #print("3m")
+                    break
+            #print(positions[-1][1:])
             CAM[n,m] += 1
         print(per*100,"%")
 

@@ -93,6 +93,7 @@ def ray_cast(w=640,h=480,FOV_w=np.deg2rad(40),FOV_h=np.deg2rad(30)):
     plt.title('Single Image Ray Tracing')
     print ('Saving Image')
     plt.savefig('../figures/ray_traced_img.png',dpi=1000)
+    
 obj = Plane()
 R = np.linspace(0,5,5)
 CAMPOS = [-10,0,0]
