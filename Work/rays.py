@@ -40,7 +40,7 @@ def runTrace(r0,v0,M,L,D,m = 0,Y = -100.,h = 0.01):
 
     return positions
 
-def cam(res,angle,m,Y,R = 1,Z = 100.,D = 150.):
+def cam(res,angle,m,Y,R = 1,Z = 100.,D = 150.,l = 5,t = 1):
     """This sets up the camera for the scene
     res - <array> number of [x,y] pixels
     R - <float> proportional to the focal length of the camera
@@ -51,7 +51,6 @@ def cam(res,angle,m,Y,R = 1,Z = 100.,D = 150.):
 
     def inShape(P,Y,t = 1,l = 5):
         """It's an F"""
-
         inPlane = False
 
         r = P[1]
@@ -74,10 +73,12 @@ def cam(res,angle,m,Y,R = 1,Z = 100.,D = 150.):
         else:
             return False
 
-    p = np.arange(-angle[0],angle[0],res[0])
-    q = np.arange(-angle[1],angle[1],res[1])
+    p = np.arange(-angle[0],angle[0],1/res[0])
+    q = np.arange(-angle[1],angle[1],1/res[1])
 
-    CAM = np.transpose(np.zeros((len(p),len(q))))
+
+
+    CAM = np.zeros((res[1],res[0]))
 
     n = m = -1
     for alpha in p:
@@ -95,3 +96,4 @@ def cam(res,angle,m,Y,R = 1,Z = 100.,D = 150.):
 
     plt.imshow(CAM)
     plt.show()
+    print(l,"\n",type(CAM),len(CAM[0,:]),"x",len(CAM[:,0]),"\n",CAM)
