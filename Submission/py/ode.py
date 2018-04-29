@@ -25,22 +25,14 @@ def rk2(y, f, t, h):
     k2 = f(t + 0.5*h, y + 0.5*h*k1)
     return y + h*k2
 
-def rk4(y, f, t, h):
+def rk4(y, f, h2, h):
     """Runge-Kutta RK4"""
-    k1 = f(t, y)
-    k2 = f(t + 0.5*h, y + 0.5*h*k1)
-    k3 = f(t + 0.5*h, y + 0.5*h*k2)
-    k4 = f(t + h, y + h*k3)
-    return y + h/6 * (k1 + 2*k2 + 2*k3 + k4)
+    k1 = f(y,h2)
+    k2 = f(y + 0.5*h*k1,h2)
+    k3 = f(y + 0.5*h*k2,h2)
+    k4 = f(y + h*k3,h2)
+    return h/6 * (k1 + 2*k2 + 2*k3 + k4)
 
-def sqrnorm(vec):
-    return np.einsum('...i,...i',vec,vec)
-
-def RK4f(y,h2):
-    f = np.zeros(y.shape)
-    f[0:3] = y[3:6]
-    f[3:6] = - 1.5 * h2 * y[0:3] / np.power(sqrnorm(y[0:3]),2.5)
-    return f
 
 def velocity_verlet(y, f, t, h):
     """Velocity Verlet

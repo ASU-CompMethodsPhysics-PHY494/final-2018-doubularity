@@ -1,9 +1,18 @@
 import numpy as np
-from ode import RK4f, sqrnorm
+from ode import rk4
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 
 plt.style.use('ggplot')
+
+def sqrnorm(vec):
+    return np.einsum('...i,...i',vec,vec)
+
+def RK4f(y,h2):
+    f = np.zeros(y.shape)
+    f[0:3] = y[3:6]
+    f[3:6] = - 1.5 * h2 * y[0:3] / np.power(sqrnorm(y[0:3]),2.5)
+    return f
 
 def trace_rays(theta,phi,h=0.01):
     phi = np.linspace(-np.deg2rad(phi),np.deg2rad(phi),4)
@@ -21,31 +30,18 @@ def trace_rays(theta,phi,h=0.01):
         h2 = sqrnorm(np.cross(point,velocity))
         pos = []
         for i in range(500):
-            #simple step size control
-            rkstep = 0.02
-
-            # standard Runge-Kutta
-            y = np.zeros(6)
-            y[0:3] = point
-            y[3:6] = velocity
-            k1 = RK4f( y, h2)
-            k2 = RK4f( y + 0.5*h*k1, h2)
-            k3 = RK4f( y + 0.5*h*k2, h2)
-            k4 = RK4f( y + h*k3, h2)
-
-            increment = rkstep/6. * (k1 + 2*k2 + 2*k3 + k4)
-            if (np.linalg.norm(increment[3:6])) > 5:
+            y = np.append(point,velocity)
+            y += rk4(y,RK4f,h2,h)
+            if np.linalg.norm(y[3:6]) > 5:
                 break
-            velocity += increment[3:6]
-
-            point += increment[0:3]
             pos.append(y[0:3])
-
-
         pos = np.array(pos)
         ax.plot3D(pos[:,0],pos[:,1],pos[:,2])
     plt.xlim(-3,1)
     plt.ylim(-2,2)
     ax.set_zlim(-2,2)
-    plt.title('Ray Tracing Black Hole')
-    plt.savefig('../figures/ray_tracing_bh_3d.png',dpi=300)
+    plt.show()
+    #plt.title('Ray Tracing Black Hole')
+    #plt.savefig('../figures/ray_tracing_bh_3d.png',dpi=300)
+
+trace_rays(30,30,h=0.001)
