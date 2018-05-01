@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import misc
 import time
-import curses
+from ode import rk4
 
 class Plane:
     '''
@@ -43,60 +43,90 @@ class Plane:
         y_ind = self.find_nearest(self.p_y,y)
         return (self.img[y_ind][x_ind])
 
-def intersect_plane(O, D, P, N):
-    # Return the distance from O to the intersection of the ray (O, D) with the
-    # plane (P, N), or +inf if there is no intersection.
-    # O and P are 3D points, D and N (normal) are normalized vectors.
-    denom = np.dot(D, N)
-    if np.abs(denom) < 1e-6:
-        return np.inf
-    d = np.dot(P - O, N) / denom
-    if d < 0:
-        return np.inf
-    return d
+def sqrnorm(vec):
+    return np.einsum('...i,...i',vec,vec)
 
-def trace(theta,phi):
-    R = 1
-    x = R*np.cos(theta)*np.cos(phi)
-    y = R*np.sin(theta)*np.cos(phi)
-    z = R*np.sin(phi)
-    t = np.inf
-    rayO = CAMPOS
-    rayD = np.array((x,y,z))
-    t_obj = intersect_plane(rayO, rayD, obj.r,obj.normal)
-    if t_obj < t:
-        t = t_obj
-    if t == np.inf:
-        return (np.zeros(3),np.zeros(3))
-    M = rayO + rayD * t
-    if (obj.p1[0] <= M[1] <= obj.p2[0]) and (obj.p1[1] <= M[2] <= obj.p2[1]):
-        color = obj.get_color(M[1],M[2])
-    else:
+def RK4f(y,h2):
+    f = np.zeros(y.shape)
+    f[0:3] = y[3:6]
+    f[3:6] = - 1.5 * h2 * y[0:3] / np.power(sqrnorm(y[0:3]),2.5)
+    return f
+
+def trace_ray(pos,theta,phi,h=0.1):
+    v_x = np.cos(theta)*np.cos(phi)
+    v_y = np.sin(theta)*np.cos(phi)
+    v_z = np.sin(phi)
+    velocity = np.array([v_x,v_y,v_z])
+    point = np.array(pos)
+    h2 = sqrnorm(np.cross(point,velocity))
+
+    while np.linalg.norm(point) <= 15:
+        y = np.zeros(6)
+        y[0:3] = point
+        y[3:6] = velocity
+        increment = rk4(y,RK4f,h2,h)
         color = np.zeros(3)
-    return (color, M)
+        if np.linalg.norm(point+increment[0:3]) < 0.01:
+            break
+        if ((obj.p1[0] <= point[1]+increment[1] <= obj.p2[0]) and
+             (obj.p1[1] <= point[2]+increment[2] <= obj.p2[1]) and
+             (obj.r[0]-0.1 <= point[0]+increment[0] <= obj.r[0]+0.1)):
+            color = obj.get_color(point[1]+increment[1],point[2]+increment[2])
+            break
+        point += increment[0:3]
+        velocity += increment[3:6]
+    return (color)
 
 
-
-def ray_cast(w=640,h=480,FOV_w=np.deg2rad(40),FOV_h=np.deg2rad(30)):
+def ray_cast(w=640,h=480,cam=[-10.0,0.0,0.0],quad=None):
+    FOV_w=np.deg2rad(40)
+    FOV_h=np.deg2rad(30)
     img = np.zeros((h,w,3))
     pix = w*h
     count = 0
-    for i,phi in enumerate(np.linspace(-FOV_h/2,FOV_h/2,h)):
-        for j,theta in enumerate(np.linspace(-FOV_w/2,FOV_w/2,w)):
-            color, (x, y, z) = trace(theta,phi)
+    if quad == 1:
+        t_ang = np.linspace(0,FOV_h/4,h/2)
+        p_ang = np.linspace(0,FOV_w/4,w/2)
+    elif quad == 2:
+        t_ang = np.linspace(0,FOV_h/4,h/2)
+        p_ang = np.linspace(-FOV_w/4,0,w/2)
+    elif quad == 3:
+        t_ang = np.linspace(-FOV_h/4,0,h/2)
+        p_ang = np.linspace(0,FOV_w/4,w/2)
+    elif quad == 4:
+        t_ang = np.linspace(-FOV_h/4,0,h/2)
+        p_ang = np.linspace(-FOV_w/4,0,w/2)
+    else:
+        t_ang = np.linspace(-FOV_h/2,FOV_h/2,h)
+        p_ang = np.linspace(-FOV_w/2,FOV_w/2,w)
+    for i,phi in enumerate(t_ang):
+        for j,theta in enumerate(p_ang):
+            color = trace_ray(cam,theta,phi)
             img[i][j] = color
             if count/pix*100%5 == 0:
                 print ('{}%...'.format(count/pix*100))
             count += 1
     print ('100%\nDone.')
+    return (img)
+    '''
     plt.imshow(img,interpolation='nearest')
     plt.title('Single Image Ray Tracing')
     print ('Saving Image')
-    plt.savefig('../figures/ray_traced_img.png',dpi=1000)
+    plt.show()
+    '''
+
+from multiprocessing.dummy import Pool as ThreadPool
+
 obj = Plane()
-R = np.linspace(0,5,5)
-CAMPOS = [-10,0,0]
+CAMPOS = [-10.0,0.0,0.0]
 FOV_w = np.deg2rad(40)
 FOV_h = np.deg2rad(30)
-RES = [960,540]
+RES = [16,9]
 ray_cast(w=RES[0],h=RES[1])
+
+in_vals = [[RES,CAMPOS,1],[RES,CAMPOS,2],
+            [RES,CAMPOS,3],[RES,CAMPOS,4]]
+
+pool = ThreadPool(4)
+results = zip(*pool.map(ray_cast, in_vals))
+print (results)
