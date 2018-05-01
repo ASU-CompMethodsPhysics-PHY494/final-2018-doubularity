@@ -1,3 +1,4 @@
-from version6 import *
+from bhsim import *
 
-render()
+saveIm(render())
+#render()
