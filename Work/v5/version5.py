@@ -34,18 +34,24 @@ def verlet(y,f,t,h):
     t - <float> time
     h - <float> time step distance
     """
-    r0 = np.array(y[:3])
-    v0 = np.array(f(t,y)[:3])
+    #Half step velocity
+    F = f(t,y)
+    y[3] += 0.5 * h * F[3]
+    y[4] += 0.5 * h * F[4]
+    y[5] += 0.5 * h * F[5]
+    #Full step position
+    y[0] += h*y[3]
+    y[1] += h*y[4]
+    y[2] += h*y[5]
+    #Full step velocity
+    F = f(t + h,y)
+    y[3] += 0.5 * h * F[3]
+    y[4] += 0.5 * h * F[4]
+    y[5] += 0.5 * h * F[5]
 
-    v1_2 = v0 + h/2 * np.array(f(t,y)[3:])
-    r1 = r0 + h * v1_2
-    y1 = np.append(r1,v1_2)
-    v1 = v1_2 * h/2 * np.array(f(t+h,y1)[3:])
-    y2 = np.append(r1,v1)
+    return y
 
-    return list(y2)
-
-def render(res = [16,9],angle = 30,h = 1,R = 5,D = 10,kR = 150,m = 0,Z = -10,thiccness = 10,l = 65,shape = "circle"):
+def render(res = [16,9],angle = 30,h = .01,R = 5,D = 10,kR = 150,m = 0,Z = -10,thiccness = 2,l = 30,shape = "circle"):
     """Renders the image for the set up scene
     res       - <array> [x,y] resolution
     angle     - <float> angle coverd by the x axis (degrees)
@@ -68,7 +74,6 @@ def render(res = [16,9],angle = 30,h = 1,R = 5,D = 10,kR = 150,m = 0,Z = -10,thi
         """
         a_r = y[0]*y[4]**2
         a_theta = 2*y[3]*y[4]/y[0]
-
         return [y[3],y[4],0,a_r,a_theta,0]
     def inShape(r,shape,l,thiccness):
         """Determines whether a set of coordinates exist within a shape
@@ -116,14 +121,15 @@ def render(res = [16,9],angle = 30,h = 1,R = 5,D = 10,kR = 150,m = 0,Z = -10,thi
             theta_dot = np.sqrt(np.sin(a)**2 + np.cos(a)**2 * np.sin(b)**2)/r0
             #State vector:
             y = [r0,theta0,phi0,r0_dot,theta_dot,0]
+            #print(y,f(0,y))
 
             #Running the traces:
             t = 0
             positions = [[t,r0,theta0,phi0]]
             while 1:
-                y = verlet(y,f,t,h)
+                y[:] = verlet(y,f,t,h)
                 t += h
-                print(positions,";",t,cart2Pol(positions[-1][1:]))
+                #print(t,y[0])
                 positions.append([t,y[0],y[1],y[2]])
                 #Checking kill conditions:
                 if inShape(positions[-1][1:],shape,l,thiccness):
