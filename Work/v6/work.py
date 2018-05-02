@@ -1,4 +1,5 @@
 from bhsim import *
 
-saveIm(render())
+mass = float(input("What mass is the blach hole? (planck coordinates) --> "))
+saveIm(render(M = mass))
 #render()

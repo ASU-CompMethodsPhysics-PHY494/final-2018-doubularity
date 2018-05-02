@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.misc as scm
 import time
-from ray_tracing import Plane
 
 def pol2Cart(r):
     """
@@ -54,7 +53,7 @@ def verlet(y,f,t,h):
 
     return y
 
-def render(res = [160,90],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = 110,shape = "plane",thiccness = 2,l = 5,h = .1):
+def render(res = [16,9],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = 110,shape = "plane",thiccness = 2,l = 5,h = .1):
     """Renders the image in the scene set up
     res       - <array> number of pixels in the [x,y] directions
     angle     - <float> angle covered by the x axis (degrees)
@@ -104,19 +103,15 @@ def render(res = [160,90],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = 110,shape 
                     inside = True
             if shape == "plane":
                 inside = True
-            if shape == "image":
-                obj = Plane(path = './figures/sagrada-familia.jpg',scale = l)
-                if obj.p1[1] < x < obj.p2[1] and obj.p1[0] < y < obj.p2[0]:
-                    inside = object.get_color(x,y)
-                    print(inside)
 
-                return inside
+
+        return inside
 
 
 
     #Setup camera
     #--------------------------------------------------------------------------
-    CAM = np.zeros((res[1],res[0]))
+    CAM = np.zeros((res[1],res[0],3))
     alpha = angle * np.pi/180
     beta = alpha * res[1]/res[0]
     #--------------------------------------------------------------------------
@@ -154,18 +149,22 @@ def render(res = [160,90],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = 110,shape 
                 t += h
                 positions.append([t,y[0],y[1],y[2]])
 
-                if inShape(y[:3],Z,thiccness,l,shape) != False:
-                    CAM[n,m] += 1#inShape(y[:3],Z,thiccness,l,shape)
+                if inShape(y[:3],Z,thiccness,l,shape):
+                    CAM[n,m,:] = [1,0,0]
                     break
-                if y[0] > kR:
+                elif y[0] > kR:
                     break
                 elif y[0] < 3*M:
                     print(y[0],"vs.",3*M)
+                    CAM[n,m,:] = [0,1,0]
                     break
+                else:
+                    CAM[n,m,:] = [0,0,0]
+
 
 
             print("{0}%".format(int(per*1000)/10))
-            #CAM[n,m] += 1
+
     #==========================================================================
 
     #Output

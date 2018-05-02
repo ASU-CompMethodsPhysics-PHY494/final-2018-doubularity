@@ -54,7 +54,7 @@ def verlet(y,f,t,h):
 
     return y
 
-def render(res = [16,9],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = -10,shape = "F",thiccness = 2,l = 5,h = .1):
+def render(res = [16,9],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = -10,shape = "image",thiccness = 2,l = .01,h = .1):
     """Renders the image in the scene set up
     res       - <array> number of pixels in the [x,y] directions
     angle     - <float> angle covered by the x axis (degrees)
@@ -101,15 +101,23 @@ def render(res = [16,9],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = -10,shape = 
                     inside = True
                     color = [1,1,1]
             if shape == "F":
-                if -3 < x < -1 and -5 < y < 5:
+                if -3 < x/l < -1 and -5 < y/l < 5:
                     inside = True
                     color = [1,1,1]
-                elif -3 < x < 3 and 3 < y < 5:
+                elif -3 < x/l < 5 and 3 < y/l < 5:
+                    inside = True
+                    color = [1,1,1]
+                elif -3 < x/l < 3 and -1 < y/l < 1:
                     inside = True
                     color = [1,1,1]
             if shape == "plane":
                 inside = True
                 color = [1,1,1]
+            if shape == "image":
+                pic = scm.imread("./figures/sagrada-familia.jpg")
+                if -len(pic[:,0]) < 2*y/(l) < len(pic[:,0]) and -len(pic[0,:]) < 2*x/(l) < len(pic[0,:]):
+                    inside = True
+                    color = pic[int(y/l - len(pic[:,0])/2),int(x/l - len(pic[0,:])/2)]
 
 
         return inside,color
@@ -122,26 +130,32 @@ def render(res = [16,9],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = -10,shape = 
     alpha = angle * np.pi/180
     beta = alpha * res[1]/res[0]
     #--------------------------------------------------------------------------
-    per = -1/(res[0]*res[1])
+    per = -1
     m = -1
     for a in np.arange(-alpha/2,alpha/2,alpha/res[0]):
         m += 1
         n = -1
         for b in np.arange(-beta/2,beta/2,beta/res[1]):
-            per += 1/(res[0]*res[1])
+            per += 1
             n += 1
             #Setting up particles
             #==================================================================
             #Setting up particle positions
             #------------------------------------------------------------------
             x = [R*np.sin(a),R*np.cos(a)*np.sin(b),D - R*np.cos(a)*np.cos(b)]
+            if x[1] > 0:
+                x[0] *= -1
+
             r0,theta0,phi0 = cart2Pol(x)
             #------------------------------------------------------------------
 
             #Setting up particle velocities
             #------------------------------------------------------------------
-            r0_dot = abs(x[0])/x[0]*np.sqrt(1 - (np.sin(a)**2 + np.cos(a)**2*np.sin(b)**2))
-            theta0_dot = -abs(x[1])/x[1]*np.sqrt(np.sin(a)**2 + np.cos(a)**2*np.sin(b)**2)/r0
+            r0_dot = -np.sqrt(1 - (np.sin(a)**2 + np.cos(a)**2*np.sin(b)**2))
+
+            theta0_dot = np.sqrt(np.sin(a)**2 + np.cos(a)**2*np.sin(b)**2)/r0
+            if x[1] > 0:
+                theta0_dot *= -1
             #------------------------------------------------------------------
 
             y = [r0,theta0,phi0,r0_dot,theta0_dot,0]
@@ -157,18 +171,17 @@ def render(res = [16,9],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = -10,shape = 
                 positions.append([t,y[0],y[1],y[2]])
 
                 if inShape(y[:3],Z,thiccness,l,shape)[0]:
+                    CAM[n,m,:] = inShape(y[:3],Z,thiccness,l,shape)[1]
                     break
                 if y[0] > kR:
                     break
                 elif y[0] < 3*M:
                     break
-            CAM[n,m,:] = inShape(y[:3],Z,thiccness,l,shape)[1]
 
             #pb.printProgressBar(int(per*1000)/10,100,prefix = 'Rendering...',suffix = 'Complete',length = 50)
-            pb.printProgressBar(per*res[0]*res[1],res[0]*res[1],prefix = 'Rendering...',suffix = 'Complete',length = 50)
+            pb.printProgressBar(per + 1,res[0]*res[1],prefix = 'Rendering...',suffix = 'Complete',length = 50)
             #print("{0}%".format(int(per*1000)/10))
             #CAM[n,m] += 1
-    pb.printProgressBar(res[0]*res[1],res[0]*res[1],prefix = 'Rendering...',suffix = 'Complete',length = 50)
     #==========================================================================
 
     #Output

@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.misc as scm
+import time
 
 def pol2Cart(r):
     """
@@ -16,9 +18,9 @@ def cart2Pol(x):
     x - <array> [x,y,z]
     """
     r = np.sqrt(x[0]**2 + x[1]**2 + x[2]**2)
-    if r > x[2]:
+    if r > abs(x[2]):
         theta = np.arccos(x[2]/r)
-        if r * np.sin(theta) < x[0]:
+        if abs(r * np.sin(theta)) >= abs(x[0]):
             phi = np.arccos(x[0]/(r*np.sin(theta)))
         else:
             phi = 0
@@ -51,8 +53,8 @@ def verlet(y,f,t,h):
 
     return y
 
-def render(res = [1280,720],angle = 30,R = 5,D = 100,kR = 150,m = 0,Z = -10,shape = "circle",thiccness = 2,l = 5,h = .1):
-    """Renders the motion equation
+def render(res = [16*5,9*5],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = -10,shape = "F",thiccness = 2,l = 5,h = .1):
+    """Renders the image in the scene set up
     res       - <array> number of pixels in the [x,y] directions
     angle     - <float> angle covered by the x axis (degrees)
     R         - <float> radius of lens
@@ -64,6 +66,7 @@ def render(res = [1280,720],angle = 30,R = 5,D = 100,kR = 150,m = 0,Z = -10,shap
     thiccness - <float> thickness of collision plane
     l         - <float> standard length for the shape
     """
+    dt = time.time()
     def f(t,y):
         """The derivative function for the particle state
         t - <float> time
@@ -71,7 +74,7 @@ def render(res = [1280,720],angle = 30,R = 5,D = 100,kR = 150,m = 0,Z = -10,shap
         """
         a_r = y[0]*y[4]**2
 
-        if y[0] > 0:
+        if y[0] > 1e-14:
             a_theta = -2*y[3]*y[4]/y[0]
         else:
             a_theta = 0
@@ -92,6 +95,11 @@ def render(res = [1280,720],angle = 30,R = 5,D = 100,kR = 150,m = 0,Z = -10,shap
                     inside = True
             if shape == "circle":
                 if x**2 + y**2 <= l**2:
+                    inside = True
+            if shape == "F":
+                if -3 < x < -1 and -5 < y < 5:
+                    inside = True
+                elif -3 < x < 3 and 3 < y < 5:
                     inside = True
 
         return inside
@@ -116,7 +124,7 @@ def render(res = [1280,720],angle = 30,R = 5,D = 100,kR = 150,m = 0,Z = -10,shap
             #==================================================================
             #Setting up particle positions
             #------------------------------------------------------------------
-            x = [-R*np.sin(a),R*np.cos(a)*np.sin(b),D - R*np.cos(a)*np.cos(b)]
+            x = [R*np.sin(a),R*np.cos(a)*np.sin(b),D - R*np.cos(a)*np.cos(b)]
             r0,theta0,phi0 = cart2Pol(x)
             #------------------------------------------------------------------
 
@@ -143,10 +151,12 @@ def render(res = [1280,720],angle = 30,R = 5,D = 100,kR = 150,m = 0,Z = -10,shap
                     break
                 elif y[0] > kR:
                     break
-                elif y[0] <= 3*m:
+                elif y[0] < 3*M:
+                    print(y[0],"vs.",3*M)
                     break
 
-            print(per*100,"%")
+
+            print("{0}%".format(int(per*1000)/10))
             CAM[n,m] += 1
     #==========================================================================
 
@@ -154,3 +164,12 @@ def render(res = [1280,720],angle = 30,R = 5,D = 100,kR = 150,m = 0,Z = -10,shap
     #--------------------------------------------------------------------------
     plt.imshow(CAM)
     plt.show()
+    dt -= time.time()
+    print("Run time: {0}s".format(-dt))
+    return CAM
+
+def saveIm(CAM):
+    with open("log.txt",'r+') as rec:
+        n = int(rec.read()[-1]) + 1
+        rec.write(str(n))
+        scm.imsave("image{0}.jpg".format(n),CAM)

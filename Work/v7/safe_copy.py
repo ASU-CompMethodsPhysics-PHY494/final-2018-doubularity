@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.misc as scm
 import time
-from ray_tracing import Plane
 
 def pol2Cart(r):
     """
@@ -54,7 +53,7 @@ def verlet(y,f,t,h):
 
     return y
 
-def render(res = [160,90],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = 110,shape = "plane",thiccness = 2,l = 5,h = .1):
+def render(res = [16*5,9*5],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = -10,shape = "F",thiccness = 2,l = 5,h = .1):
     """Renders the image in the scene set up
     res       - <array> number of pixels in the [x,y] directions
     angle     - <float> angle covered by the x axis (degrees)
@@ -73,10 +72,10 @@ def render(res = [160,90],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = 110,shape 
         t - <float> time
         y - <array> state vector [r,theta,phi,r_dot,theta_dot,phi_dot]
         """
-        a_r = 2*M/(y[0] - 2*M) * y[3]**2/y[0] + (y[0] - 3*M)*y[4]**2
+        a_r = y[0]*y[4]**2
 
         if y[0] > 1e-14:
-            a_theta = -2*(y[0] - 3*M)/(y[0] - 2*M) * y[3]*y[4]/y[0]
+            a_theta = -2*y[3]*y[4]/y[0]
         else:
             a_theta = 0
 
@@ -102,15 +101,8 @@ def render(res = [160,90],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = 110,shape 
                     inside = True
                 elif -3 < x < 3 and 3 < y < 5:
                     inside = True
-            if shape == "plane":
-                inside = True
-            if shape == "image":
-                obj = Plane(path = './figures/sagrada-familia.jpg',scale = l)
-                if obj.p1[1] < x < obj.p2[1] and obj.p1[0] < y < obj.p2[0]:
-                    inside = object.get_color(x,y)
-                    print(inside)
 
-                return inside
+        return inside
 
 
 
@@ -154,10 +146,10 @@ def render(res = [160,90],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = 110,shape 
                 t += h
                 positions.append([t,y[0],y[1],y[2]])
 
-                if inShape(y[:3],Z,thiccness,l,shape) != False:
-                    CAM[n,m] += 1#inShape(y[:3],Z,thiccness,l,shape)
+                if inShape(y[:3],Z,thiccness,l,shape):
+                    CAM[n,m] += 1
                     break
-                if y[0] > kR:
+                elif y[0] > kR:
                     break
                 elif y[0] < 3*M:
                     print(y[0],"vs.",3*M)
@@ -165,7 +157,7 @@ def render(res = [160,90],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = 110,shape 
 
 
             print("{0}%".format(int(per*1000)/10))
-            #CAM[n,m] += 1
+            CAM[n,m] += 1
     #==========================================================================
 
     #Output
@@ -176,11 +168,8 @@ def render(res = [160,90],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = 110,shape 
     print("Run time: {0}s".format(-dt))
     return CAM
 
-def saveIm(CAM,imName = None):
-    if imName == None:
-        with open("log.txt",'r+') as rec:
-            n = int(rec.read()[-1]) + 1
-            rec.write(str(n))
-            imName = "image{0}.jpg".format(n)
-
-        scm.imsave(imName,CAM)
+def saveIm(CAM):
+    with open("log.txt",'r+') as rec:
+        n = int(rec.read()[-1]) + 1
+        rec.write(str(n))
+        scm.imsave("image{0}.jpg".format(n),CAM)
