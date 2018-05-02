@@ -1,12 +1,16 @@
+/*
+
+Ray tracer written in c++ to speed up tracing. Bad idea too many problems to
+fix.
+
+*/
+
+
 #include <iostream>
 #include <vector>
 #include <math.h>
 
 using namespace std;
-
-vector<double> linspace(double a, double b, double c);
-double *RK4f(double y[], double h2[]);
-vector<double> add_arr(double arr_1[], double arr_2[]);
 
 vector<double> linspace(double a, double b, double c) {
     vector<double> array;
