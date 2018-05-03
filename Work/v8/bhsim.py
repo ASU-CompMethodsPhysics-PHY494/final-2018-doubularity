@@ -54,7 +54,9 @@ def verlet(y,f,t,h):
 
     return y
 
-def render(res = [16,9],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = -10,shape = "image",thiccness = 2,l = .01,h = .1):
+rR = 5
+
+def render(res = [16*rR,9*rR],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = -10,shape = "image",thiccness = 1,l = .05,h = .1,image = "checker_board.jpg",showHole = False):
     """Renders the image in the scene set up
     res       - <array> number of pixels in the [x,y] directions
     angle     - <float> angle covered by the x axis (degrees)
@@ -91,33 +93,45 @@ def render(res = [16,9],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = -10,shape = 
         inside = False
         color = [0,0,0]
 
-        if abs(z - Z) < thiccness:
-            if shape == "square":
-                if -l < x < l and -l < y < l:
-                    inside = True
-                    color = [1,1,1]
-            if shape == "circle":
-                if x**2 + y**2 <= l**2:
-                    inside = True
-                    color = [1,1,1]
-            if shape == "F":
-                if -3 < x/l < -1 and -5 < y/l < 5:
-                    inside = True
-                    color = [1,1,1]
-                elif -3 < x/l < 5 and 3 < y/l < 5:
-                    inside = True
-                    color = [1,1,1]
-                elif -3 < x/l < 3 and -1 < y/l < 1:
-                    inside = True
-                    color = [1,1,1]
-            if shape == "plane":
+        if "disk" in shape:
+            v = [x,y,z]
+            rad = float(shape.split()[1])
+            nmVr = [1,4,2]
+            nmVr /= np.linalg.norm(nmVr)
+            if rad * np.dot(v,nmVr) <= thiccness and abs(np.linalg.norm(v) - rad) <= thiccness:
                 inside = True
                 color = [1,1,1]
-            if shape == "image":
-                pic = scm.imread("./figures/sagrada-familia.jpg")
-                if -len(pic[:,0]) < 2*y/(l) < len(pic[:,0]) and -len(pic[0,:]) < 2*x/(l) < len(pic[0,:]):
+        else:
+            if abs(z - Z) < thiccness:
+                if shape == "square":
+                    if -l < x < l and -l < y < l:
+                        inside = True
+                        color = [1,1,1]
+                if shape == "circle":
+                    if x**2 + y**2 <= l**2:
+                        inside = True
+                        color = [1,1,1]
+                if shape == "F":
+                    if -3 < x/l < -1 and -5 < y/l < 5:
+                        inside = True
+                        color = [1,1,1]
+                    elif -3 < x/l < 5 and 3 < y/l < 5:
+                        inside = True
+                        color = [1,1,1]
+                    elif -3 < x/l < 3 and -1 < y/l < 1:
+                        inside = True
+                        color = [1,1,1]
+                if shape == "plane":
                     inside = True
-                    color = pic[int(y/l - len(pic[:,0])/2),int(x/l - len(pic[0,:])/2)]
+                    color = [1,1,1]
+                if shape == "image":
+                    pic = scm.imread("./figures/{0}".format(image))
+                    size = [len(pic[0,:]) * l,len(pic[:,0]) * l]
+                    if -size[0] < 2*x < size[0] and -size[1] < 2*y < size[1]:
+                        inside = True
+                        eX = int(x/l - size[0]/2)
+                        eY = int(y/l + size[1]/2)
+                        color = pic[eY,eX,:]
 
 
         return inside,color
@@ -176,27 +190,31 @@ def render(res = [16,9],angle = 30,R = 5,D = 100,kR = 150,M = 0,Z = -10,shape = 
                 if y[0] > kR:
                     break
                 elif y[0] < 3*M:
+                    if showHole:
+                        CAM[n,m,:] = [1,0,0]
                     break
 
             #pb.printProgressBar(int(per*1000)/10,100,prefix = 'Rendering...',suffix = 'Complete',length = 50)
-            pb.printProgressBar(per + 1,res[0]*res[1],prefix = 'Rendering...',suffix = 'Complete',length = 50)
+            pb.printProgressBar(per + 1,res[0]*res[1],prefix = 'Rendering...',suffix = 'Complete; ETA:{0}s  '.format(int((time.time()-dt)/(per+1)*(res[0]*res[1]-per-1)+1)),length = 50)
             #print("{0}%".format(int(per*1000)/10))
             #CAM[n,m] += 1
     #==========================================================================
 
     #Output
     #--------------------------------------------------------------------------
-    plt.imshow(CAM)
-    plt.show()
     dt -= time.time()
     print("Run time: {0}s".format(-dt))
+    plt.imshow(CAM)
+    plt.show()
     return CAM
 
 def saveIm(CAM,imName = None):
     if imName == None:
         with open("log.txt",'r+') as rec:
-            n = int(rec.read()[-1]) + 1
-            rec.write(str(n))
+            n = len(rec.read().split(",")) + 1
+            m = str(n)
+            m += ","
+            rec.write(m)
             imName = "image{0}.jpg".format(n)
 
         scm.imsave(imName,CAM)
