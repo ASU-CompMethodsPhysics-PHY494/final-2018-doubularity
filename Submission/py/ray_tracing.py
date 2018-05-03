@@ -3,6 +3,7 @@
 Ray tracing algorithm
 
 '''
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import misc
@@ -21,7 +22,7 @@ class Plane:
       Position of the image in spherical coordinates
 
     '''
-    def __init__(self,path='../figures/checker_board.jpg',r=[-15,0,0],scale=10):
+    def __init__(self,path='../figures/checker_board.jpg',r=[0,0,1],scale=3):
         self.path = path
         self.r = np.array(r)
         self.img = misc.imread(self.path)/255
@@ -42,6 +43,14 @@ class Plane:
         y_ind = self.find_nearest(self.p_y,y)
         return (self.img[y_ind][x_ind])
 
+'''
+
+Equations of motion and quick square calculator found in example repository:
+
+https://github.com/rantonels/starless/blob/master/tracer.py
+
+'''
+
 def sqrnorm(vec):
     return np.einsum('...i,...i',vec,vec)
 
@@ -61,16 +70,16 @@ def trace_ray(pos,theta,phi,h=0.1):
     color = np.zeros(3)
     y = np.zeros(6)
     count = 0
-    while (sqrnorm(point)) <= 300:
+    while (sqrnorm(point)) <= 25:
         count += 1
         y[0:3] = point
         y[3:6] = velocity
         increment = rk4(y,RK4f,h2,h)
-        if sqrnorm(point+increment[0:3]) < 0.1:
+        if sqrnorm(point+increment[0:3]) < 0.01:
             break
         if ((obj.p1[0] <= point[1]+increment[1] <= obj.p2[0]) and
              (obj.p1[1] <= point[2]+increment[2] <= obj.p2[1]) and
-             (obj.r[0]-0.05 <= point[0]+increment[0] <= obj.r[0]+0.05)):
+             (obj.r[0]-0.001 <= point[0]+increment[0] <= obj.r[0]+0.001)):
             color = obj.get_color(point[1]+increment[1],point[2]+increment[2])
             break
         point += increment[0:3]
@@ -97,10 +106,11 @@ def ray_cast(w=160,h=90,cam=[-10.0,0,0,0.0]):
 import time
 
 obj = Plane()
-CAMPOS = [-13.0,0.0,0.0]
-RES = np.array([160,120])
+CAMPOS = [-5.0,0.0,0.0]
+RES = np.array([80,60])
 start = time.time()
 img = ray_cast(RES[0],RES[1],CAMPOS)
 print ('Time: {} s'.format(time.time()-start))
 plt.imshow(img,interpolation='nearest')
-plt.savefig('tracing_behind_320_240.png',dpi=300)
+plt.show()
+#plt.savefig('tracing_behind_320_240.png',dpi=300)
