@@ -21,7 +21,7 @@ class Plane:
       Position of the image in spherical coordinates
 
     '''
-    def __init__(self,path='../figures/checker_board.jpg',r=[1,0,0],scale=6):
+    def __init__(self,path='../figures/checker_board.jpg',r=[-15,0,0],scale=10):
         self.path = path
         self.r = np.array(r)
         self.img = misc.imread(self.path)/255
@@ -60,7 +60,9 @@ def trace_ray(pos,theta,phi,h=0.1):
     h2 = sqrnorm(np.cross(point,velocity))
     color = np.zeros(3)
     y = np.zeros(6)
-    while (sqrnorm(point)) <= 100:
+    count = 0
+    while (sqrnorm(point)) <= 300:
+        count += 1
         y[0:3] = point
         y[3:6] = velocity
         increment = rk4(y,RK4f,h2,h)
@@ -95,29 +97,10 @@ def ray_cast(w=160,h=90,cam=[-10.0,0,0,0.0]):
 import time
 
 obj = Plane()
-CAMPOS = [-10.0,0.0,0.0]
-FOV_w = np.deg2rad(40)
-FOV_h = np.deg2rad(30)
-RES = np.array([80,60])
+CAMPOS = [-13.0,0.0,0.0]
+RES = np.array([160,120])
 start = time.time()
 img = ray_cast(RES[0],RES[1],CAMPOS)
 print ('Time: {} s'.format(time.time()-start))
 plt.imshow(img,interpolation='nearest')
-#plt.savefig('tracing_640_480.png',dpi=300)
-plt.show()
-'''
-
-in_vals = [[RES,CAMPOS,1],[RES,CAMPOS,2],
-            [RES,CAMPOS,3],[RES,CAMPOS,4]]
-
-pool = ThreadPool(4)
-results = pool.map(ray_cast, in_vals)
-print (np.array(results).shape)
-top = np.concatenate((results[3], results[1]), axis=0)
-bottom = np.concatenate((results[2], results[0]), axis=0)
-img = np.concatenate((top,bottom),axis=1)
-
-print (top.shape,bottom.shape)
-plt.imshow(img,interpolation='nearest')
-plt.show()
-'''
+plt.savefig('tracing_behind_320_240.png',dpi=300)
